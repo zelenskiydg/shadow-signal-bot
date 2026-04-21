@@ -1,10 +1,22 @@
+const fs = require('fs');
+const path = require('path');
+
 const VOLUME_THRESHOLD = 3.0;
 const PRICE_THRESHOLD = 0.5;
 const HISTORY_SIZE = 10;
-const COOLDOWN_MS = 5 * 60 * 1000; // 1 сигнал на монету в 5 минут
+const COOLDOWN_MS = 5 * 60 * 1000;
+
+const LOG_FILE = path.join(__dirname, '../signals.log');
 
 const closedCandles = [];
 const lastSignalTime = {};
+
+function logSignal(entry) {
+  const line = JSON.stringify(entry) + '\n';
+  fs.appendFile(LOG_FILE, line, (err) => {
+    if (err) console.error('[DETECTOR] Log write error:', err.message);
+  });
+}
 
 function onKline(data) {
   const k = data.k;
@@ -50,6 +62,19 @@ function onKline(data) {
     lastSignalTime[current.symbol] = now;
 
     const volumePercent = ((volumeRatio - 1) * 100).toFixed(0);
+    const signalPrice = current.close;
+    const timestamp = new Date().toISOString();
+
+    const entry = {
+      time: timestamp,
+      symbol: current.symbol,
+      price: signalPrice,
+      volumeRatio: parseFloat(volumeRatio.toFixed(2)),
+      priceChange: parseFloat(priceChange.toFixed(3)),
+    };
+
+    logSignal(entry);
+    console.log(`[SIGNAL LOGGED] ${entry.symbol} | Price: ${entry.price} | Vol: ${entry.volumeRatio}x`);
 
     const text = [
       '🔦 SHADOW SIGNAL',
