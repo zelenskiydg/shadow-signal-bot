@@ -18,6 +18,41 @@ function logSignal(entry) {
   });
 }
 
+async function getPrice(symbol) {
+  try {
+    const res = await fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`);
+    const data = await res.json();
+    return parseFloat(data.price);
+  } catch (err) {
+    console.error(`[DETECTOR] Price fetch error for ${symbol}:`, err.message);
+    return null;
+  }
+}
+
+function formatChange(entry, current, label) {
+  if (current === null) return `${label}: ошибка`;
+  const change = ((current - entry) / entry * 100);
+  const sign = change >= 0 ? '+' : '';
+  const emoji = change >= 0.3 ? '✅' : change <= -0.3 ? '🔴' : '⚪️';
+  return `${label}: ${current.toFixed(6)} (${sign}${change.toFixed(2)}%) ${emoji}`;
+}
+
+function scheduleChecks(symbol, entryPrice, onResult) {
+  const checks = [
+    { label: '+1 мин', delay: 60 * 1000 },
+    { label: '+5 мин', delay: 5 * 60 * 1000 },
+    { label: '+30 мин', delay: 30 * 60 * 1000 },
+  ];
+
+  checks.forEach(({ label, delay }) => {
+    setTimeout(async () => {
+      const price = await getPrice(symbol);
+      const line = formatChange(entryPrice, price, label);
+      onResult(label, price, line);
+    }, delay);
+  });
+}
+
 function onKline(data) {
   const k = data.k;
 
@@ -62,19 +97,18 @@ function onKline(data) {
     lastSignalTime[current.symbol] = now;
 
     const volumePercent = ((volumeRatio - 1) * 100).toFixed(0);
-    const signalPrice = current.close;
+    const entryPrice = current.close;
     const timestamp = new Date().toISOString();
 
     const entry = {
       time: timestamp,
       symbol: current.symbol,
-      price: signalPrice,
+      price: entryPrice,
       volumeRatio: parseFloat(volumeRatio.toFixed(2)),
       priceChange: parseFloat(priceChange.toFixed(3)),
     };
 
     logSignal(entry);
-    console.log(`[SIGNAL LOGGED] ${entry.symbol} | Price: ${entry.price} | Vol: ${entry.volumeRatio}x`);
 
     const text = [
       '🔦 SHADOW SIGNAL',
@@ -90,6 +124,29 @@ function onKline(data) {
     if (module.exports.onSignal) {
       module.exports.onSignal(text);
     }
+
+    // Замеры через 1, 5, 30 минут
+    const results = {};
+    scheduleChecks(current.symbol, entryPrice, (label, price, line) => {
+      results[label] = line;
+
+      // Отправляем когда все три замера готовы
+      if (Object.keys(results).length === 3) {
+        const report = [
+          `📊 РЕЗУЛЬТАТ: ${current.symbol}`,
+          `Вход: ${entryPrice.toFixed(6)}`,
+          results['+1 мин'],
+          results['+5 мин'],
+          results['+30 мин'],
+        ].join('\n');
+
+        console.log('\n' + report + '\n');
+
+        if (module.exports.onSignal) {
+          module.exports.onSignal(report);
+        }
+      }
+    });
   }
 }
 
