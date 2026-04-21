@@ -54,9 +54,10 @@ function scheduleChecks(symbol, entryPrice, onResult) {
 }
 
 function getSignalLevel(oiChange) {
-  if (oiChange === null) return null;
+  if (oiChange === null) return 'NEUTRAL';
   if (oiChange >= 2) return 'STRONG';
   if (oiChange >= 0) return 'MEDIUM';
+  if (Math.abs(oiChange) < 0.5) return 'NEUTRAL';
   return 'WEAK';
 }
 
@@ -103,10 +104,7 @@ function onKline(data) {
     const oiChange = getOIChange(current.symbol);
     const level = getSignalLevel(oiChange);
 
-    if (level === 'WEAK') {
-      console.log(`[DETECTOR] WEAK signal for ${current.symbol}, skipping`);
-      return;
-    }
+    // WEAK отправляем с предупреждением
 
     lastSignalTime[current.symbol] = now;
 
@@ -118,7 +116,12 @@ function onKline(data) {
       ? `OI: ${oiChange >= 0 ? '+' : ''}${oiChange.toFixed(2)}% ${oiChange >= 2 ? '↑ (new positions opening)' : '↑ (possible early accumulation)'}`
       : 'OI: данные недоступны';
 
-    const levelEmoji = level === 'STRONG' ? '🔴' : '🟡';
+    const levelEmoji = {
+      STRONG: '🔴',
+      MEDIUM: '🟡',
+      NEUTRAL: '⚪',
+      WEAK: '⚠️'
+    }[level] || '🔦';
 
     const text = [
       `${levelEmoji} ${level} SIGNAL`,
