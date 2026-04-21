@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { getOIChange } = require('./oiFetcher');
 
 const VOLUME_THRESHOLD = 3.0;
 const PRICE_THRESHOLD = 0.5;
@@ -7,7 +8,6 @@ const HISTORY_SIZE = 10;
 const COOLDOWN_MS = 5 * 60 * 1000;
 
 const LOG_FILE = path.join(__dirname, '../signals.log');
-
 const closedCandles = [];
 const lastSignalTime = {};
 
@@ -53,9 +53,15 @@ function scheduleChecks(symbol, entryPrice, onResult) {
   });
 }
 
+function getSignalLevel(oiChange) {
+  if (oiChange === null) return null;
+  if (oiChange >= 2) return 'STRONG';
+  if (oiChange >= 0) return 'MEDIUM';
+  return 'WEAK';
+}
+
 function onKline(data) {
   const k = data.k;
-
   if (!k.x) return;
 
   const candle = {
@@ -94,30 +100,36 @@ function onKline(data) {
       return;
     }
 
+    const oiChange = getOIChange(current.symbol);
+    const level = getSignalLevel(oiChange);
+
+    if (level === 'WEAK') {
+      console.log(`[DETECTOR] WEAK signal for ${current.symbol}, skipping`);
+      return;
+    }
+
     lastSignalTime[current.symbol] = now;
 
     const volumePercent = ((volumeRatio - 1) * 100).toFixed(0);
     const entryPrice = current.close;
     const timestamp = new Date().toISOString();
 
-    const entry = {
-      time: timestamp,
-      symbol: current.symbol,
-      price: entryPrice,
-      volumeRatio: parseFloat(volumeRatio.toFixed(2)),
-      priceChange: parseFloat(priceChange.toFixed(3)),
-    };
+    const oiLine = oiChange !== null
+      ? `OI: ${oiChange >= 0 ? '+' : ''}${oiChange.toFixed(2)}% ${oiChange >= 2 ? '↑ (new positions opening)' : '↑ (possible early accumulation)'}`
+      : 'OI: данные недоступны';
 
-    logSignal(entry);
+    const levelEmoji = level === 'STRONG' ? '🔴' : '🟡';
 
     const text = [
-      '🔦 SHADOW SIGNAL',
+      `${levelEmoji} ${level} SIGNAL`,
       `Монета: ${current.symbol}`,
       `Объём: +${volumePercent}% за 1 мин`,
       `Цена: ${priceChange > 0 ? '+' : ''}${priceChange.toFixed(2)}% (тихо)`,
-      '⚠️ Направление не определено — объём мог быть от продавца. Проверь стакан.',
+      oiLine,
       '⏱ Вероятное движение через 30-60 сек',
     ].join('\n');
+
+    logSignal({ time: timestamp, symbol: current.symbol, price: entryPrice, volumeRatio: parseFloat(volumeRatio.toFixed(2)), priceChange: parseFloat(priceChange.toFixed(3)), oiChange, level });
 
     console.log('\n' + text + '\n');
 
@@ -125,12 +137,9 @@ function onKline(data) {
       module.exports.onSignal(text);
     }
 
-    // Замеры через 1, 5, 30 минут
     const results = {};
     scheduleChecks(current.symbol, entryPrice, (label, price, line) => {
       results[label] = line;
-
-      // Отправляем когда все три замера готовы
       if (Object.keys(results).length === 3) {
         const report = [
           `📊 РЕЗУЛЬТАТ: ${current.symbol}`,
@@ -139,9 +148,7 @@ function onKline(data) {
           results['+5 мин'],
           results['+30 мин'],
         ].join('\n');
-
         console.log('\n' + report + '\n');
-
         if (module.exports.onSignal) {
           module.exports.onSignal(report);
         }
