@@ -1,3 +1,5 @@
+const fetch = require('node-fetch');
+
 const SYMBOLS = ['1000PEPEUSDT', 'DOGEUSDT', 'WIFUSDT', '1000SHIBUSDT', 'BONKUSDT'];
 
 const oiCache = {};
@@ -18,8 +20,9 @@ async function updateAll() {
     const current = await fetchOI(symbol);
     if (current === null) continue;
 
-    const prev = oiCache[symbol]?.current || null;
+    const prev = oiCache[symbol]?.current ?? null;
     oiCache[symbol] = { prev, current };
+    console.log(`[OI] ${symbol} | prev: ${prev} | current: ${current}`);
   }
   console.log('[OI] Cache updated');
 }
