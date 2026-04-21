@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+const axios = require('axios');
 
 const SYMBOLS = ['1000PEPEUSDT', 'DOGEUSDT', 'WIFUSDT', '1000SHIBUSDT', 'BONKUSDT'];
 
@@ -6,9 +6,8 @@ const oiCache = {};
 
 async function fetchOI(symbol) {
   try {
-    const res = await fetch(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${symbol}`);
-    const data = await res.json();
-    return parseFloat(data.openInterest);
+    const res = await axios.get(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${symbol}`);
+    return parseFloat(res.data.openInterest);
   } catch (err) {
     console.error(`[OI] Fetch error for ${symbol}:`, err.message);
     return null;
