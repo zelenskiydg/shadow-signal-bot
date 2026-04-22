@@ -1,6 +1,6 @@
 const WebSocket = require('ws');
 
-const SYMBOLS = ['1000pepeusdt', 'dogeusdt', 'wifusdt', '1000shibusdt', 'bonkusdt'];
+const SYMBOLS = ['1000pepeusdt', 'dogeusdt', 'wifusdt', '1000shibusdt', '1000bonkusdt'];
 const BASE_URL = 'wss://fstream.binance.com/stream';
 
 function buildStreams() {

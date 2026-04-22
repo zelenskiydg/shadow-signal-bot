@@ -6,7 +6,7 @@ const { connect } = require('./src/websocket');
 const { startOIUpdates } = require('./src/oiFetcher');
 const { startAggTradeStream } = require('./src/directionAnalyzer');
 
-const SYMBOLS = ['1000PEPEUSDT', 'DOGEUSDT', 'WIFUSDT', '1000SHIBUSDT', 'BONKUSDT'];
+const SYMBOLS = ['1000PEPEUSDT', 'DOGEUSDT', 'WIFUSDT', '1000SHIBUSDT', '1000BONKUSDT'];
 
 const detector = require('./src/detector');
 detector.onSignal = (text) => {
