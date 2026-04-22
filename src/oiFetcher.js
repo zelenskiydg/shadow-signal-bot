@@ -1,8 +1,9 @@
 const axios = require('axios');
 
 const SYMBOLS = ['1000PEPEUSDT', 'DOGEUSDT', 'WIFUSDT', '1000SHIBUSDT', 'BONKUSDT'];
+const HISTORY_SIZE = 5;
 
-const oiCache = {};
+const oiHistory = {};
 
 async function fetchOI(symbol) {
   try {
@@ -19,17 +20,24 @@ async function updateAll() {
     const current = await fetchOI(symbol);
     if (current === null) continue;
 
-    const prev = oiCache[symbol]?.current ?? null;
-    oiCache[symbol] = { prev, current };
-    console.log(`[OI] ${symbol} | prev: ${prev} | current: ${current}`);
+    if (!oiHistory[symbol]) oiHistory[symbol] = [];
+    oiHistory[symbol].push(current);
+
+    if (oiHistory[symbol].length > HISTORY_SIZE) {
+      oiHistory[symbol].shift();
+    }
+
+    console.log(`[OI] ${symbol} | queue: ${oiHistory[symbol].length}/${HISTORY_SIZE} | current: ${current}`);
   }
   console.log('[OI] Cache updated');
 }
 
 function getOIChange(symbol) {
-  const entry = oiCache[symbol];
-  if (!entry || entry.prev === null) return null;
-  return ((entry.current - entry.prev) / entry.prev) * 100;
+  const history = oiHistory[symbol];
+  if (!history || history.length < HISTORY_SIZE) return null;
+  const oldest = history[0];
+  const current = history[history.length - 1];
+  return ((current - oldest) / oldest) * 100;
 }
 
 function startOIUpdates(intervalSec = 60) {
