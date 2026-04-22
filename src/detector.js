@@ -5,7 +5,10 @@ const { getOIChange } = require('./oiFetcher');
 const VOLUME_THRESHOLD = 3.0;
 const PRICE_THRESHOLD = 0.5;
 const HISTORY_SIZE = 10;
-const COOLDOWN_MS = 5 * 60 * 1000;
+const COOLDOWN = {
+  '1000PEPEUSDT': 15 * 60 * 1000,
+  'default': 5 * 60 * 1000,
+};
 
 const LOG_FILE = path.join(__dirname, '../signals.log');
 const closedCandles = [];
@@ -96,7 +99,8 @@ function onKline(data) {
     const now = Date.now();
     const last = lastSignalTime[current.symbol] || 0;
 
-    if (now - last < COOLDOWN_MS) {
+    const cooldownMs = COOLDOWN[current.symbol] || COOLDOWN['default'];
+    if (now - last < cooldownMs) {
       console.log(`[DETECTOR] Cooldown active for ${current.symbol}, skipping`);
       return;
     }
