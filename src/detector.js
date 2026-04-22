@@ -112,9 +112,18 @@ function onKline(data) {
     const entryPrice = current.close;
     const timestamp = new Date().toISOString();
 
-    const oiLine = oiChange !== null
-      ? `OI: ${oiChange >= 0 ? '+' : ''}${oiChange.toFixed(2)}% ${oiChange >= 2 ? '↑ (new positions opening)' : '↑ (possible early accumulation)'}`
-      : 'OI: данные недоступны';
+    let oiLine;
+    if (oiChange === null) {
+      oiLine = 'OI: данные недоступны';
+    } else if (oiChange >= 2) {
+      oiLine = `OI: +${oiChange.toFixed(2)}% ↑ (new positions opening)`;
+    } else if (oiChange > 0.1) {
+      oiLine = `OI: +${oiChange.toFixed(2)}% ↑ (possible early accumulation)`;
+    } else if (oiChange >= -0.1) {
+      oiLine = `OI: ${oiChange >= 0 ? '+' : ''}${oiChange.toFixed(2)}% — spot-driven move / be cautious`;
+    } else {
+      oiLine = `OI: ${oiChange.toFixed(2)}% ↓ (positions closing)`;
+    }
 
     const levelEmoji = {
       STRONG: '🔴',
