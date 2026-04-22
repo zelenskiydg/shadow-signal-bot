@@ -12,9 +12,17 @@ const OI_BOOST_POSITIVE = 15;
 const OI_BOOST_NEGATIVE = -10;
 const MAX_CONFIDENCE = 95;
 
+const TRACK_HORIZONS = [
+  { label: '1min', ms: 60 * 1000 },
+  { label: '2min', ms: 2 * 60 * 1000 },
+  { label: '5min', ms: 5 * 60 * 1000 },
+];
+const TRACK_TOTAL_MS = 5 * 60 * 1000;
+
 const BASE_URL = 'wss://fstream.binance.com/stream';
 
 const tradeBuffers = {};
+const activeTracks = [];
 
 function cleanBuffer(symbol) {
   const cutoff = Date.now() - LOOKBACK_SEC * 1000;
@@ -114,6 +122,59 @@ function formatDirection(result) {
   return `🤷 Direction: UNCERTAIN (${result.reason})`;
 }
 
+function trackSignalResult(symbol, entryPrice, entryTime, callback) {
+  const track = {
+    symbol,
+    entryPrice,
+    entryTime,
+    callback,
+    snapshots: {},
+    lastPrice: entryPrice,
+  };
+
+  for (const h of TRACK_HORIZONS) {
+    track.snapshots[h.label] = { min: entryPrice, max: entryPrice, close: entryPrice };
+  }
+
+  activeTracks.push(track);
+
+  setTimeout(() => {
+    const result = {};
+    for (const h of TRACK_HORIZONS) {
+      const s = track.snapshots[h.label];
+      result[`horizon_${h.label}`] = {
+        mfe_pct: parseFloat((((s.max - entryPrice) / entryPrice) * 100).toFixed(4)),
+        mae_pct: parseFloat((((s.min - entryPrice) / entryPrice) * 100).toFixed(4)),
+        close_pct: parseFloat((((s.close - entryPrice) / entryPrice) * 100).toFixed(4)),
+      };
+    }
+
+    const idx = activeTracks.indexOf(track);
+    if (idx !== -1) activeTracks.splice(idx, 1);
+
+    callback(result);
+  }, TRACK_TOTAL_MS);
+
+  console.log(`[TRACK] Started tracking ${symbol} from ${entryPrice}`);
+}
+
+function updateTracks(symbol, price, tradeTime) {
+  for (const track of activeTracks) {
+    if (track.symbol !== symbol) continue;
+
+    const elapsed = tradeTime - track.entryTime;
+    track.lastPrice = price;
+
+    for (const h of TRACK_HORIZONS) {
+      if (elapsed > h.ms) continue;
+      const s = track.snapshots[h.label];
+      if (price > s.max) s.max = price;
+      if (price < s.min) s.min = price;
+      s.close = price;
+    }
+  }
+}
+
 function startAggTradeStream(symbols, attempt = 0) {
   const streams = symbols.map(s => `${s.toLowerCase()}@aggTrade`).join('/');
   const url = `${BASE_URL}?streams=${streams}`;
@@ -140,6 +201,8 @@ function startAggTradeStream(symbols, attempt = 0) {
       isBuyerMaker: data.m,
     });
 
+    updateTracks(symbol, price, data.T);
+
     // Periodic cleanup every 100 trades
     if (tradeBuffers[symbol].length % 100 === 0) {
       cleanBuffer(symbol);
@@ -157,4 +220,4 @@ function startAggTradeStream(symbols, attempt = 0) {
   });
 }
 
-module.exports = { analyzeDirection, formatDirection, startAggTradeStream };
+module.exports = { analyzeDirection, formatDirection, startAggTradeStream, trackSignalResult };

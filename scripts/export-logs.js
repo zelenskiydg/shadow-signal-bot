@@ -10,21 +10,22 @@ const DEFAULT_LINES = 5000;
 const linesArg = process.argv.find(a => a.startsWith('--lines='));
 const lines = linesArg ? parseInt(linesArg.split('=')[1], 10) : DEFAULT_LINES;
 
-// Load existing entries for dedup
-function loadExistingKeys() {
-  const keys = new Set();
+// Load existing entries as map: "time|symbol" -> { line, entry }
+function loadExisting() {
+  const map = new Map();
   if (fs.existsSync(ARCHIVE_FILE)) {
     const content = fs.readFileSync(ARCHIVE_FILE, 'utf-8').trim();
     if (content) {
       for (const line of content.split('\n')) {
         try {
           const entry = JSON.parse(line);
-          keys.add(`${entry.time}|${entry.symbol}`);
+          const key = `${entry.time}|${entry.symbol}`;
+          map.set(key, entry);
         } catch {}
       }
     }
   }
-  return keys;
+  return map;
 }
 
 // Fetch logs from Railway
@@ -70,21 +71,30 @@ if (signals.length === 0) {
   process.exit(0);
 }
 
-const existingKeys = loadExistingKeys();
+const existing = loadExisting();
 let newCount = 0;
+let updatedCount = 0;
 let dupCount = 0;
 
-const fd = fs.openSync(ARCHIVE_FILE, 'a');
 for (const entry of signals) {
   const key = `${entry.time}|${entry.symbol}`;
-  if (existingKeys.has(key)) {
-    dupCount++;
-    continue;
-  }
-  existingKeys.add(key);
-  fs.writeSync(fd, JSON.stringify(entry) + '\n');
-  newCount++;
-}
-fs.closeSync(fd);
+  const prev = existing.get(key);
 
-console.log(`${signals.length} signals extracted, ${newCount} new (${dupCount} duplicates skipped)`);
+  if (!prev) {
+    existing.set(key, entry);
+    newCount++;
+  } else if (entry.stage === 'result' && prev.stage === 'initial') {
+    existing.set(key, entry);
+    updatedCount++;
+  } else {
+    dupCount++;
+  }
+}
+
+// Rewrite archive with merged data
+const output = Array.from(existing.values())
+  .map(e => JSON.stringify(e))
+  .join('\n') + '\n';
+fs.writeFileSync(ARCHIVE_FILE, output);
+
+console.log(`${signals.length} signals extracted, ${newCount} new, ${updatedCount} updated with results (${dupCount} duplicates skipped)`);

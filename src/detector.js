@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getOIChange } = require('./oiFetcher');
-const { analyzeDirection, formatDirection } = require('./directionAnalyzer');
+const { analyzeDirection, formatDirection, trackSignalResult } = require('./directionAnalyzer');
 
 const VOLUME_THRESHOLD = 3.0;
 const PRICE_THRESHOLD = 0.5;
@@ -23,39 +23,9 @@ function logSignal(entry) {
   console.log('SIGNAL_LOG: ' + JSON.stringify(entry));
 }
 
-async function getPrice(symbol) {
-  try {
-    const res = await fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`);
-    const data = await res.json();
-    return parseFloat(data.price);
-  } catch (err) {
-    console.error(`[DETECTOR] Price fetch error for ${symbol}:`, err.message);
-    return null;
-  }
-}
-
-function formatChange(entry, current, label) {
-  if (current === null) return `${label}: ошибка`;
-  const change = ((current - entry) / entry * 100);
-  const sign = change >= 0 ? '+' : '';
-  const emoji = change >= 0.3 ? '✅' : change <= -0.3 ? '🔴' : '⚪️';
-  return `${label}: ${current.toFixed(6)} (${sign}${change.toFixed(2)}%) ${emoji}`;
-}
-
-function scheduleChecks(symbol, entryPrice, onResult) {
-  const checks = [
-    { label: '+1 мин', delay: 60 * 1000 },
-    { label: '+5 мин', delay: 5 * 60 * 1000 },
-    { label: '+30 мин', delay: 30 * 60 * 1000 },
-  ];
-
-  checks.forEach(({ label, delay }) => {
-    setTimeout(async () => {
-      const price = await getPrice(symbol);
-      const line = formatChange(entryPrice, price, label);
-      onResult(label, price, line);
-    }, delay);
-  });
+function formatHorizon(label, h) {
+  const sign = (v) => v >= 0 ? '+' : '';
+  return `${label}: max ${sign(h.mfe_pct)}${h.mfe_pct.toFixed(2)}% / min ${sign(h.mae_pct)}${h.mae_pct.toFixed(2)}% / close ${sign(h.close_pct)}${h.close_pct.toFixed(2)}%`;
 }
 
 function getSignalLevel(oiChange) {
@@ -151,7 +121,7 @@ function onKline(data) {
       '⏱ Вероятное движение через 30-60 сек',
     ].join('\n');
 
-    logSignal({ time: timestamp, symbol: current.symbol, price: entryPrice, volumeRatio: parseFloat(volumeRatio.toFixed(2)), priceChange: parseFloat(priceChange.toFixed(3)), oiChange, level, direction: dirResult.direction, confidence: dirResult.confidence, buyRatio: dirResult.stats.buyRatio, tradesCount: dirResult.stats.tradesCount });
+    logSignal({ stage: 'initial', time: timestamp, symbol: current.symbol, price: entryPrice, volumeRatio: parseFloat(volumeRatio.toFixed(2)), priceChange: parseFloat(priceChange.toFixed(3)), oiChange, level, direction: dirResult.direction, confidence: dirResult.confidence, buyRatio: dirResult.stats.buyRatio, tradesCount: dirResult.stats.tradesCount });
 
     console.log('\n' + text + '\n');
 
@@ -159,21 +129,21 @@ function onKline(data) {
       module.exports.onSignal(text);
     }
 
-    const results = {};
-    scheduleChecks(current.symbol, entryPrice, (label, price, line) => {
-      results[label] = line;
-      if (Object.keys(results).length === 3) {
-        const report = [
-          `📊 РЕЗУЛЬТАТ: ${current.symbol}`,
-          `Вход: ${entryPrice.toFixed(6)}`,
-          results['+1 мин'],
-          results['+5 мин'],
-          results['+30 мин'],
-        ].join('\n');
-        console.log('\n' + report + '\n');
-        if (module.exports.onSignal) {
-          module.exports.onSignal(report);
-        }
+    trackSignalResult(current.symbol, entryPrice, Date.now(), (result) => {
+      logSignal({ stage: 'result', time: timestamp, symbol: current.symbol, price: entryPrice, result });
+
+      const report = [
+        `📊 РЕЗУЛЬТАТ: ${current.symbol}`,
+        `Вход: ${entryPrice.toFixed(6)}`,
+        formatHorizon('+1 мин', result.horizon_1min),
+        formatHorizon('+2 мин', result.horizon_2min),
+        formatHorizon('+5 мин', result.horizon_5min),
+      ].join('\n');
+
+      console.log('\n' + report + '\n');
+
+      if (module.exports.onSignal) {
+        module.exports.onSignal(report);
       }
     });
   }
