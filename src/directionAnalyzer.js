@@ -78,10 +78,13 @@ function analyzeDirection(symbol, oiDeltaPct) {
   }
 
   // OI adjustment
-  if (oiDeltaPct !== null && oiDeltaPct !== undefined) {
+  if (oiDeltaPct !== null && oiDeltaPct !== undefined && !isNaN(oiDeltaPct)) {
     if (oiDeltaPct > OI_BOOST_THRESHOLD) {
+      const side = direction === 'LONG' ? 'longs' : 'shorts';
+      reason += ` + OI rising (new ${side} opening)`;
       confidence += OI_BOOST_POSITIVE;
     } else if (oiDeltaPct < -OI_BOOST_THRESHOLD) {
+      reason += ` + OI falling (positions closing, weaker move)`;
       confidence += OI_BOOST_NEGATIVE;
     }
   }
