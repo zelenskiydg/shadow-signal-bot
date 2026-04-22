@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getOIChange } = require('./oiFetcher');
+const { analyzeDirection, formatDirection } = require('./directionAnalyzer');
 
 const VOLUME_THRESHOLD = 3.0;
 const PRICE_THRESHOLD = 0.5;
@@ -129,6 +130,9 @@ function onKline(data) {
       oiLine = `OI: ${oiChange.toFixed(2)}% ↓ (positions closing)`;
     }
 
+    const dirResult = analyzeDirection(current.symbol, oiChange);
+    const dirLine = formatDirection(dirResult);
+
     const levelEmoji = {
       STRONG: '🔴',
       MEDIUM: '🟡',
@@ -142,10 +146,11 @@ function onKline(data) {
       `Объём: +${volumePercent}% за 1 мин`,
       `Цена: ${priceChange > 0 ? '+' : ''}${priceChange.toFixed(2)}% (тихо)`,
       oiLine,
+      dirLine,
       '⏱ Вероятное движение через 30-60 сек',
     ].join('\n');
 
-    logSignal({ time: timestamp, symbol: current.symbol, price: entryPrice, volumeRatio: parseFloat(volumeRatio.toFixed(2)), priceChange: parseFloat(priceChange.toFixed(3)), oiChange, level });
+    logSignal({ time: timestamp, symbol: current.symbol, price: entryPrice, volumeRatio: parseFloat(volumeRatio.toFixed(2)), priceChange: parseFloat(priceChange.toFixed(3)), oiChange, level, direction: dirResult.direction, confidence: dirResult.confidence, buyRatio: dirResult.stats.buyRatio, tradesCount: dirResult.stats.tradesCount });
 
     console.log('\n' + text + '\n');
 
