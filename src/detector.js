@@ -20,6 +20,7 @@ function logSignal(entry) {
   fs.appendFile(LOG_FILE, line, (err) => {
     if (err) console.error('[DETECTOR] Log write error:', err.message);
   });
+  console.log('SIGNAL_LOG: ' + JSON.stringify(entry));
 }
 
 async function getPrice(symbol) {
@@ -60,8 +61,8 @@ function scheduleChecks(symbol, entryPrice, onResult) {
 function getSignalLevel(oiChange) {
   if (oiChange === null) return 'NEUTRAL';
   if (oiChange >= 2) return 'STRONG';
-  if (oiChange >= 0) return 'MEDIUM';
   if (Math.abs(oiChange) < 0.5) return 'NEUTRAL';
+  if (oiChange > 0) return 'MEDIUM';
   return 'WEAK';
 }
 
