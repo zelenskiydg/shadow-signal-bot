@@ -25,7 +25,7 @@ function loadExisting() {
 // Fetch signals from Railway Volume
 function fetchSignals() {
   try {
-    const output = execSync('railway run cat /data/signals.log', {
+    const output = execSync('railway ssh cat /data/signals.log', {
       encoding: 'utf-8',
       timeout: 60000,
       stdio: ['pipe', 'pipe', 'pipe'],
