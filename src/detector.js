@@ -130,7 +130,7 @@ function onKline(data) {
       module.exports.onSignal(text);
     }
 
-    trackSignalResult(current.symbol, entryPrice, Date.now(), (result) => {
+    trackSignalResult(current.symbol, entryPrice, Date.now(), dirResult.direction, (result) => {
       logSignal({ stage: 'result', time: timestamp, symbol: current.symbol, price: entryPrice, result });
 
       const report = [

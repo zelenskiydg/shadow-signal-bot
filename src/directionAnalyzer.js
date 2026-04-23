@@ -123,11 +123,12 @@ function formatDirection(result) {
   return `🤷 Direction: UNCERTAIN (${result.reason})`;
 }
 
-function trackSignalResult(symbol, entryPrice, entryTime, callback) {
+function trackSignalResult(symbol, entryPrice, entryTime, direction, callback) {
   const track = {
     symbol,
     entryPrice,
     entryTime,
+    direction,
     callback,
     snapshots: {},
     lastPrice: entryPrice,
@@ -143,10 +144,29 @@ function trackSignalResult(symbol, entryPrice, entryTime, callback) {
     const result = {};
     for (const h of TRACK_HORIZONS) {
       const s = track.snapshots[h.label];
+      let mfe_pct, mae_pct, close_pct;
+
+      if (direction === 'SHORT') {
+        mfe_pct = ((entryPrice - s.min) / entryPrice) * 100;
+        mae_pct = ((s.max - entryPrice) / entryPrice) * 100;
+        close_pct = ((entryPrice - s.close) / entryPrice) * 100;
+      } else if (direction === 'LONG') {
+        mfe_pct = ((s.max - entryPrice) / entryPrice) * 100;
+        mae_pct = ((entryPrice - s.min) / entryPrice) * 100;
+        close_pct = ((s.close - entryPrice) / entryPrice) * 100;
+      } else {
+        mfe_pct = ((s.max - entryPrice) / entryPrice) * 100;
+        mae_pct = ((s.min - entryPrice) / entryPrice) * 100;
+        close_pct = ((s.close - entryPrice) / entryPrice) * 100;
+      }
+
       result[`horizon_${h.label}`] = {
-        mfe_pct: parseFloat((((s.max - entryPrice) / entryPrice) * 100).toFixed(4)),
-        mae_pct: parseFloat((((s.min - entryPrice) / entryPrice) * 100).toFixed(4)),
-        close_pct: parseFloat((((s.close - entryPrice) / entryPrice) * 100).toFixed(4)),
+        mfe_pct: parseFloat(mfe_pct.toFixed(4)),
+        mae_pct: parseFloat(mae_pct.toFixed(4)),
+        close_pct: parseFloat(close_pct.toFixed(4)),
+        raw_max: s.max,
+        raw_min: s.min,
+        raw_close: s.close,
       };
     }
 
