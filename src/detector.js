@@ -1,5 +1,4 @@
 const fs = require('fs');
-const path = require('path');
 const { getOIChange } = require('./oiFetcher');
 const { analyzeDirection, formatDirection, trackSignalResult } = require('./directionAnalyzer');
 
@@ -11,15 +10,17 @@ const COOLDOWN = {
   'default': 5 * 60 * 1000,
 };
 
-const LOG_FILE = path.join(__dirname, '../signals.log');
+const VOLUME_LOG = '/data/signals.log';
 const closedCandles = [];
 const lastSignalTime = {};
 
 function logSignal(entry) {
   const line = JSON.stringify(entry) + '\n';
-  fs.appendFile(LOG_FILE, line, (err) => {
-    if (err) console.error('[DETECTOR] Log write error:', err.message);
-  });
+  try {
+    fs.appendFileSync(VOLUME_LOG, line);
+  } catch (err) {
+    console.error('[DETECTOR] Volume log write error:', err.message);
+  }
   console.log('SIGNAL_LOG: ' + JSON.stringify(entry));
 }
 
@@ -135,9 +136,10 @@ function onKline(data) {
       const report = [
         `📊 РЕЗУЛЬТАТ: ${current.symbol}`,
         `Вход: ${entryPrice.toFixed(6)}`,
-        formatHorizon('+1 мин', result.horizon_1min),
-        formatHorizon('+2 мин', result.horizon_2min),
         formatHorizon('+5 мин', result.horizon_5min),
+        formatHorizon('+10 мин', result.horizon_10min),
+        formatHorizon('+15 мин', result.horizon_15min),
+        formatHorizon('+30 мин', result.horizon_30min),
       ].join('\n');
 
       console.log('\n' + report + '\n');

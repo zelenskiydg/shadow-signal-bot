@@ -13,11 +13,12 @@ const OI_BOOST_NEGATIVE = -10;
 const MAX_CONFIDENCE = 95;
 
 const TRACK_HORIZONS = [
-  { label: '1min', ms: 60 * 1000 },
-  { label: '2min', ms: 2 * 60 * 1000 },
   { label: '5min', ms: 5 * 60 * 1000 },
+  { label: '10min', ms: 10 * 60 * 1000 },
+  { label: '15min', ms: 15 * 60 * 1000 },
+  { label: '30min', ms: 30 * 60 * 1000 },
 ];
-const TRACK_TOTAL_MS = 5 * 60 * 1000;
+const TRACK_TOTAL_MS = 30 * 60 * 1000;
 
 const BASE_URL = 'wss://fstream.binance.com/stream';
 
