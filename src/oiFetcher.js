@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const SYMBOLS = ['1000PEPEUSDT', 'DOGEUSDT', 'WIFUSDT', '1000SHIBUSDT', '1000BONKUSDT'];
+const SYMBOLS = ['1000PEPEUSDT', 'DOGEUSDT', 'BANANAUSDT', '1000SHIBUSDT', '1000BONKUSDT'];
 const HISTORY_SIZE = 5;
 
 const oiHistory = {};

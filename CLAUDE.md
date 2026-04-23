@@ -68,7 +68,7 @@ OI: +2.50% ↑ (new positions opening)
 - Redis / PostgreSQL / BullMQ
 
 ## Монеты для мониторинга
-1000PEPEUSDT, DOGEUSDT, WIFUSDT, 1000SHIBUSDT, 1000BONKUSDT
+1000PEPEUSDT, DOGEUSDT, BANANAUSDT, 1000SHIBUSDT, 1000BONKUSDT
 
 ## Переменные окружения (.env)
 TELEGRAM_BOT_TOKEN=
