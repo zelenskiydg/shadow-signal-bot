@@ -15,11 +15,15 @@ const MAX_CONFIDENCE = 95;
 
 const TRACK_HORIZONS = [
   { label: '5min', ms: 5 * 60 * 1000 },
-  { label: '10min', ms: 10 * 60 * 1000 },
   { label: '15min', ms: 15 * 60 * 1000 },
   { label: '30min', ms: 30 * 60 * 1000 },
+  { label: '1h', ms: 60 * 60 * 1000 },
+  { label: '2h', ms: 2 * 60 * 60 * 1000 },
+  { label: '4h', ms: 4 * 60 * 60 * 1000 },
+  { label: '8h', ms: 8 * 60 * 60 * 1000 },
+  { label: '24h', ms: 24 * 60 * 60 * 1000 },
 ];
-const TRACK_TOTAL_MS = 30 * 60 * 1000;
+const TRACK_TOTAL_MS = 24 * 60 * 60 * 1000;
 
 const BASE_URL = 'wss://fstream.binance.com/stream';
 

@@ -136,10 +136,14 @@ function onKline(data) {
       const report = [
         `📊 РЕЗУЛЬТАТ: ${current.symbol}`,
         `Вход: ${entryPrice.toFixed(6)}`,
-        formatHorizon('+5 мин', result.horizon_5min),
-        formatHorizon('+10 мин', result.horizon_10min),
-        formatHorizon('+15 мин', result.horizon_15min),
-        formatHorizon('+30 мин', result.horizon_30min),
+        formatHorizon('+5м', result.horizon_5min),
+        formatHorizon('+15м', result.horizon_15min),
+        formatHorizon('+30м', result.horizon_30min),
+        formatHorizon('+1ч', result.horizon_1h),
+        formatHorizon('+2ч', result.horizon_2h),
+        formatHorizon('+4ч', result.horizon_4h),
+        formatHorizon('+8ч', result.horizon_8h),
+        formatHorizon('+24ч', result.horizon_24h),
       ].join('\n');
 
       console.log('\n' + report + '\n');
