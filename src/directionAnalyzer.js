@@ -25,7 +25,7 @@ const TRACK_HORIZONS = [
 ];
 const TRACK_TOTAL_MS = 24 * 60 * 60 * 1000;
 
-const BASE_URL = 'wss://fstream.binancefuture.com/stream';
+const BASE_URL = 'wss://fstream.binance.com/stream';
 
 const tradeBuffers = {};
 const activeTracks = [];
