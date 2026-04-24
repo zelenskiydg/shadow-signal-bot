@@ -1,4 +1,5 @@
 const WebSocket = require('ws');
+const { setupHeartbeat } = require('./heartbeat');
 
 // Tunable constants
 const LOOKBACK_SEC = 60;
@@ -200,13 +201,16 @@ function startAggTradeStream(symbols, attempt = 0) {
   const streams = symbols.map(s => `${s.toLowerCase()}@aggTrade`).join('/');
   const url = `${BASE_URL}?streams=${streams}`;
   const ws = new WebSocket(url);
+  const hb = setupHeartbeat(ws, 'AGGTRADE');
 
   ws.on('open', () => {
     console.log(`[AGGTRADE] Connected. Monitoring: ${symbols.join(', ')}`);
     attempt = 0;
+    hb.start();
   });
 
   ws.on('message', (raw) => {
+    hb.onData();
     const msg = JSON.parse(raw);
     const data = msg.data;
 
@@ -235,6 +239,7 @@ function startAggTradeStream(symbols, attempt = 0) {
   });
 
   ws.on('close', () => {
+    hb.stop();
     const delay = Math.min(1000 * 2 ** attempt, 30000);
     console.log(`[AGGTRADE] Disconnected. Reconnecting in ${delay / 1000}s... (attempt ${attempt + 1})`);
     setTimeout(() => startAggTradeStream(symbols, attempt + 1), delay);

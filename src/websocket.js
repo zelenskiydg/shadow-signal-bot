@@ -1,4 +1,5 @@
 const WebSocket = require('ws');
+const { setupHeartbeat } = require('./heartbeat');
 
 const SYMBOLS = ['1000pepeusdt', 'dogeusdt', 'bananausdt', '1000shibusdt', '1000bonkusdt'];
 const BASE_URL = 'wss://fstream.binance.com/stream';
@@ -11,13 +12,16 @@ function connect(onKline, attempt = 0) {
   const streams = buildStreams();
   const url = `${BASE_URL}?streams=${streams}`;
   const ws = new WebSocket(url);
+  const hb = setupHeartbeat(ws, 'WS');
 
   ws.on('open', () => {
     console.log(`[WS] Connected. Monitoring: ${SYMBOLS.join(', ')}`);
     attempt = 0;
+    hb.start();
   });
 
   ws.on('message', (raw) => {
+    hb.onData();
     const msg = JSON.parse(raw);
     const { stream, data } = msg;
 
@@ -33,6 +37,7 @@ function connect(onKline, attempt = 0) {
   });
 
   ws.on('close', () => {
+    hb.stop();
     const delay = Math.min(1000 * 2 ** attempt, 30000);
     console.log(`[WS] Disconnected. Reconnecting in ${delay / 1000}s... (attempt ${attempt + 1})`);
     setTimeout(() => connect(onKline, attempt + 1), delay);
