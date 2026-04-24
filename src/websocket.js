@@ -2,7 +2,7 @@ const WebSocket = require('ws');
 const { setupHeartbeat } = require('./heartbeat');
 
 const SYMBOLS = ['1000pepeusdt', 'dogeusdt', 'bananausdt', '1000shibusdt', '1000bonkusdt'];
-const BASE_URL = 'wss://fstream.binance.com/stream';
+const BASE_URL = 'wss://fstream.binancefuture.com/stream';
 
 function buildStreams() {
   return SYMBOLS.flatMap(s => [`${s}@kline_1m`]).join('/');
