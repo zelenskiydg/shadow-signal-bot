@@ -208,13 +208,13 @@ function startAggTradeStream(symbols, attempt = 0) {
   const hb = setupHeartbeat(ws, 'AGGTRADE');
 
   ws.on('open', () => {
-    console.log(`[AGGTRADE] Connected. Monitoring: ${symbols.join(', ')}`);
-    attempt = 0;
+    console.log(`[AGGTRADE] Connected (attempt ${attempt}). Monitoring: ${symbols.join(', ')}`);
     hb.start();
   });
 
   ws.on('message', (raw) => {
     hb.onData();
+    attempt = 0;
     const msg = JSON.parse(raw);
     const data = msg.data;
 

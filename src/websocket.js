@@ -15,13 +15,13 @@ function connect(onKline, attempt = 0) {
   const hb = setupHeartbeat(ws, 'WS');
 
   ws.on('open', () => {
-    console.log(`[WS] Connected. Monitoring: ${SYMBOLS.join(', ')}`);
-    attempt = 0;
+    console.log(`[WS] Connected (attempt ${attempt}). Monitoring: ${SYMBOLS.join(', ')}`);
     hb.start();
   });
 
   ws.on('message', (raw) => {
     hb.onData();
+    attempt = 0;
     const msg = JSON.parse(raw);
     const { stream, data } = msg;
 
